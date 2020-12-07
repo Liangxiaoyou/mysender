@@ -112,7 +112,7 @@ def create_protocol_editor(root,feild_names):
         row = Frame(root)
         label = Label(row,width=15, text=feild, anchor = 'e')
         entry = Entry(row, font= ('Courier','12','bold'),state='normal')
-        row.pack(side=TOP, fill=X, padx=5, pady=5)
+        row.pack(side=TOP, fill=X, padx=5, pady=2)
         label.pack(side=LEFT)
         entry.pack(side=RIGHT,expand=YES,fill=X)
         entries.append(entry)
@@ -129,7 +129,7 @@ def create_bottom_buttons(root):
     send_packet_button = Button(bottom_buttons, width=20, text="连续发送")
     default_packet_button = Button(bottom_buttons, width=20, text="默认值")
     reset_button = Button(bottom_buttons, width=20, text="重置")
-    send_packet_once_button = Button(bottom_buttons,width=20,text = "发送一次")
+    send_packet_once_button = Button(bottom_buttons,width=20,text="发送一次")
 
 
     #把按钮窗口放在底下，并把按钮按grind排列
@@ -177,18 +177,17 @@ def on_click_protocols_tree(event):
     status_bar.set("%s", selected_item[0])
 
     if selected_item[0] == "TCP":
-        pass
+        create_tcp_sender()
     elif selected_item[0] == "UDP":
-        pass
+        create_udp_sender()
     elif selected_item[0] == "IP":
-        #pass
         create_ip_sender()
     elif selected_item[0] == "ARP":
-        pass
+        create_arp_sender()
     elif selected_item[0] == "ICMP":
-        pass
+        create_icmp_sender()
     elif selected_item[0] == "ARP":
-        pass
+        create_arp_sender()
 
 def toggle_protocols_tree_state():
     """
@@ -267,7 +266,7 @@ def create_ip_sender():
     send_packet_once_button = create_bottom_buttons(protocol_editor_panedwindow)
     # 为"回车键"的Press事件编写事件响应代码，发送IP包
     tk.bind('<Return>', (lambda event: send_ip_packet(entries, send_packet_button)))  # <Return>代表回车键
-    # 为"发送"按钮的单击事件编写事件响应代码，发送IP包
+    # 为"连续发送"按钮的单击事件编写事件响应代码，发送IP包
     # 为"重置"按钮的单击事件编写事件响应代码，清除所有字段
     # 为"默认值"按钮的单击事件编写事件响应代码，填入IP包默认字段
     # <Button-1>代表鼠标左键单击
@@ -378,26 +377,359 @@ def send_ip_packet_once(entries):
     packet_sending = IP(raw(packet_sending))  # 转化为bytes流串
     entries[9]['state'] = NORMAL  # 重新激活
     entries[9].delete(0, END)
-    entries[9].insert(0, hex(packet_sending.chksum))
+    entries[9].insert(0, hex(packet_sending.chksum))#checksum可以自动计算校验和
     entries[9]['state'] = DISABLED  # 不可操作
     #只发送一次
     send_packet_once(packet_sending)
+
 #------------------------------------------------------------
 # TCP SEND MODULE
 #------------------------------------------------------------
+def create_tcp_sender():
+    """
+    生成TCP包编辑器
+    :return:
+    """
+    #pass
+    """
+    ###[ TCP ]### 一共8项需要构建
+    sport = ftp_data
+    dport = http
+    seq = 0
+    ack = 0
+    dataofs = None
+    reserved = 0 #保留位，entry不需要构建
+    flags = S
+    window = 8192
+    chksum = None
+    urgptr = 0 #紧急指针，默认值为0
+    options = []
+    """
+    tcp_head ='源端口：','目的端口：','序号：','确认号：','数据偏移：',\
+              '标志位：','窗口：','TCP校验和：','紧急指针','IP版本：',\
+              '头长度：','服务类型：','总长度：','标识：','标志(0-2)DF,MF：',\
+              '分段偏移量:','生存期:','上层协议:','头校验和:','源IP地址:',\
+              '目的IP地址：'
+    entries = create_protocol_editor(protocol_editor_panedwindow, tcp_head)
+    send_packet_button ,reset_buttun,default_packet_button,\
+    send_packet_once_button = create_bottom_buttons(protocol_editor_panedwindow)
+    # 为"回车键"的Press事件编写事件响应代码，发送IP包
+    tk.bind('<Return>', (lambda event: send_tcp_packet_once(entries)))  # <Return>代表回车键
+    # 为"发送"按钮的单击事件编写事件响应代码，发送IP包
+    # 为"重置"按钮的单击事件编写事件响应代码，清除所有字段
+    # 为"默认值"按钮的单击事件编写事件响应代码，填入IP包默认字段
+    # <Button-1>代表鼠标左键单击
+    send_packet_button.bind('<Button-1>', (lambda event: send_tcp_packet_continuously(entries, send_packet_button)))
+    reset_buttun.bind('<Button-1>',(lambda event:clear_protocol_editor(entries)))
+    default_packet_button.bind('<Button-1>', (lambda event: create_default_tcp_packet(entries)))
+    send_packet_once_button.bind('<Button-1>',(lambda event: send_tcp_packet_once(entries)))
 
+def create_default_tcp_packet(entries):
+    """
+     在协议字段编辑框中填入默认TCP包的字段值
+     :param entries: 协议字段编辑框列表
+     :return: None
+    """
+    clear_protocol_editor(entries)
+    default_tcp_packet = IP()/TCP()
+    entries[0].insert(0, int(default_tcp_packet.sport))
+    entries[1].insert(0, int(default_tcp_packet.dport))
+    entries[2].insert(0, int(default_tcp_packet.seq))
+    entries[3].insert(0, int(default_tcp_packet.ack))
+    entries[4].insert(0, str(default_tcp_packet.dataofs))
+    entries[5].insert(0, 'S')
+    entries[6].insert(0, int(default_tcp_packet.window))
+    entries[7]['state'] = NORMAL # 可操作
+    entries[7].insert(0, "单机发送时自动计算")
+    entries[7]['state'] = DISABLED  # 不可操作
+    entries[8].insert(0, int(default_tcp_packet.urgptr))
+    entries[9].insert(0, int(default_tcp_packet.version))
+    entries[10].insert(0, 5)
+    entries[11].insert(0, hex(default_tcp_packet.tos))
+    entries[12].insert(0, 20)
+    entries[13].insert(0, int(default_tcp_packet.id))
+    entries[14].insert(0, int(default_tcp_packet.flags))
+    entries[15].insert(0, int(default_tcp_packet.frag))
+    entries[16].insert(0, int(default_tcp_packet.ttl))
+    entries[17].insert(0, int(default_tcp_packet.proto))
+    entries[18]['state'] = NORMAL # 可操作
+    entries[18].insert(0, "单机发送时自动计算")
+    entries[18]['state'] = DISABLED  # 不可操作
+    # 目标IP地址设成本地默认网关
+    entries[20].insert(0, default_gateway)
+    default_ip_packet = IP(dst=entries[11].get())#可以省略
+    entries[19].insert(0, default_ip_packet.src)
+
+def send_tcp_packet_continuously(entries, send_packet_button):
+    """
+    发TCP包
+    :param entries:
+    :param send_packet_button:
+    :return:
+    """
+    if send_packet_button['text'] == '连续发送':
+        tcp_sport = int(entries[0].get())
+        tcp_dport = int(entries[1].get())
+        tcp_seq = int(entries[2].get())
+        tcp_ack = int(entries[3].get())
+        if entries[4].get() != 'None':
+            tcp_dataofs = int(entries[4].get())
+        tcp_flags = str(entries[5].get())
+        tcp_window = int(entries[6].get())
+        tcp=TCP(sport=tcp_sport,dport=tcp_dport,seq=tcp_seq,ack=tcp_ack,flags=tcp_flags,window=tcp_window)
+
+        if entries[4].get() != 'None':
+            tcp.dataofs = tcp_dataofs
+        #tcp.show()
+        #ip_urgptr = int(entries[8].get())
+        ip_version = int(entries[9].get())
+        ip_ihl = int(entries[10].get())
+        ip_tos = int(entries[11].get(), 16)
+        #ip_len = int(entries[12].get()) 这里出错了，不应该人为指定 ip包大小，而是应该自动生成
+        ip_id = int(entries[13].get())
+        ip_flags = int(entries[14].get())
+        ip_frag = int(entries[15].get())
+        ip_ttl = int(entries[16].get())
+        ip_proto = int(entries[17].get())
+        ip_src = entries[19].get()
+        ip_dst = entries[20].get()
+        ip= IP(version=ip_version, ihl=ip_ihl, tos=ip_tos, id=ip_id,
+                            frag=ip_frag, flags=ip_flags, ttl=ip_ttl,src=ip_src, dst=ip_dst,proto = ip_proto)
+        raw_packet=raw(ip/tcp)
+        packet_to_send=IP(raw_packet)
+        packet_to_send.show()
+        #packet_to_send = IP(raw(packet_to_send))
+        #tcp校验和
+        #tcp=TCP(raw_packet[20:])
+        tcp=packet_to_send[TCP]
+        entries[7]['state'] = NORMAL  # 重新激活
+        entries[7].delete(0, END)
+        entries[7].insert(0, hex(tcp.chksum))
+        entries[7]['state'] = DISABLED  # 不可操作
+        #ip首部校验和
+        entries[18]['state'] = NORMAL  # 重新激活
+        entries[18].delete(0, END)
+        entries[18].insert(0, hex(packet_to_send.chksum))
+        entries[18]['state'] = DISABLED  # 不可操作
+        # 开一个线程用于连续发送数据包
+        t = threading.Thread(target=send_packet_continously, args=(packet_to_send,))
+        t.setDaemon(True)
+        t.start()
+        # 使协议导航树不可用
+        toggle_protocols_tree_state()
+        send_packet_button['text'] = '停止'
+    else:
+        # 终止数据包发送线程
+        stop_sending.set()
+        # 恢复协议导航树可用
+        toggle_protocols_tree_state()
+        send_packet_button['text'] = '连续发送'
+
+def send_tcp_packet_once(entries):
+    tcp_sport = int(entries[0].get())
+    tcp_dport = int(entries[1].get())
+    tcp_seq = int(entries[2].get())
+    tcp_ack = int(entries[3].get())
+    if entries[4].get() != 'None':
+        tcp_dataofs = int(entries[4].get())
+    tcp_flags = str(entries[5].get())
+    tcp_window = int(entries[6].get())
+    tcp = TCP(sport=tcp_sport, dport=tcp_dport, seq=tcp_seq, ack=tcp_ack, flags=tcp_flags, window=tcp_window)
+
+    if entries[4].get() != 'None':
+        tcp.dataofs = tcp_dataofs
+    #tcp.show()
+    # ip_urgptr = int(entries[8].get())
+    ip_version = int(entries[9].get())
+    ip_ihl = int(entries[10].get())
+    ip_tos = int(entries[11].get(), 16)
+    # ip_len = int(entries[12].get()) 这里出错了，不应该人为指定 ip包大小，而是应该自动生成
+    ip_id = int(entries[13].get())
+    ip_flags = int(entries[14].get())
+    ip_frag = int(entries[15].get())
+    ip_ttl = int(entries[16].get())
+    ip_proto = int(entries[17].get())
+    ip_src = entries[19].get()
+    ip_dst = entries[20].get()
+    ip = IP(version=ip_version, ihl=ip_ihl, tos=ip_tos, id=ip_id,
+            frag=ip_frag, flags=ip_flags, ttl=ip_ttl, src=ip_src, dst=ip_dst, proto=ip_proto)
+    raw_packet = raw(ip / tcp)
+    packet_to_send = IP(raw_packet)
+    packet_to_send.show()
+    # packet_to_send = IP(raw(packet_to_send))
+    # tcp校验和
+    # tcp=TCP(raw_packet[20:])
+    tcp = packet_to_send[TCP]
+    entries[7]['state'] = NORMAL  # 重新激活
+    entries[7].delete(0, END)
+    entries[7].insert(0, hex(tcp.chksum))
+    entries[7]['state'] = DISABLED  # 不可操作
+    # ip首部校验和
+    entries[18]['state'] = NORMAL  # 重新激活
+    entries[18].delete(0, END)
+    entries[18].insert(0, hex(packet_to_send.chksum))
+    entries[18]['state'] = DISABLED  # 不可操作
+    send_packet_once(packet_to_send)
 #------------------------------------------------------------
 # UDP SEND MODULE
 #------------------------------------------------------------
+def create_udp_sender():
+    """
+    创建TCP包编辑器
+    :return: None
+    """
+    # TCP帧编辑区
+    udp_head = '源端口','目的端口','长度(最小值为8)','检验和',\
+               'IP协议的版本：', '首部长度：', '区分服务：','标识：', '标志(0-2)DF,MF：',\
+               '片偏移：', '生存时间：','首部校验和：', '源IP地址：', '目的IP地址：'
+    entries = create_protocol_editor(protocol_editor_panedwindow, udp_head)
+    send_packet_button, reset_buttun, default_packet_button, \
+    send_packet_once_button = create_bottom_buttons(protocol_editor_panedwindow)
+    # 为"回车键"的Press事件编写事件响应代码，发送IP包
+    tk.bind('<Return>', (lambda event: send_udp_packet_once(entries)))  # <Return>代表回车键
+    # 为"发送"按钮的单击事件编写事件响应代码，发送IP包
+    # 为"重置"按钮的单击事件编写事件响应代码，清除所有字段
+    # 为"默认值"按钮的单击事件编写事件响应代码，填入IP包默认字段
+    # <Button-1>代表鼠标左键单击
+    send_packet_button.bind('<Button-1>', (lambda event: send_udp_packet_continuously(entries, send_packet_button)))
+    reset_buttun.bind('<Button-1>', (lambda event: clear_protocol_editor(entries)))
+    default_packet_button.bind('<Button-1>', (lambda event: create_default_udp_packet(entries)))
+    send_packet_once_button.bind('<Button-1>', (lambda event: send_udp_packet_once(entries)))
 
+def create_default_udp_packet(entries):
+    """
+    在协议字段编辑框中填入默认TCP包的字段值
+    :param entries: 协议字段编辑框列表
+    :return: None
+    """
+    clear_protocol_editor(entries)
+    default_udp_packet = IP()/UDP()
+    entries[0].insert(0, int(default_udp_packet.sport))
+    entries[1].insert(0, int(default_udp_packet.dport))
+    entries[2].insert(0,8)
+    entries[3]['state'] = NORMAL # 可操作
+    entries[3].insert(0, "单机发送时自动计算")
+    entries[3]['state'] = DISABLED  # 不可操作
+
+    entries[4].insert(0, int(default_udp_packet.version))
+    entries[5].insert(0, 5)
+    entries[6].insert(0, hex(default_udp_packet.tos))
+    entries[7].insert(0, int(default_udp_packet.id))
+    entries[8].insert(0, int(default_udp_packet.flags))
+    entries[9].insert(0, int(default_udp_packet.frag))
+    entries[10].insert(0, int(default_udp_packet.ttl))
+    entries[11]['state'] = NORMAL # 可操作
+    entries[11].insert(0, "单机发送时自动计算")
+    entries[11]['state'] = DISABLED  # 不可操作
+    # 目标IP地址设成本地默认网关
+    entries[13].insert(0, default_gateway)
+    default_ip_packet = IP(dst=entries[13].get())#可以省略
+    entries[12].insert(0, default_ip_packet.src)
+
+def send_udp_packet_continuously(entries, send_packet_button):
+    """
+    发TCP包
+    :param entries:
+    :param send_packet_button:
+    :return:
+    """
+    if send_packet_button['text'] == '连续发送':
+        udp_sport = int(entries[0].get())
+        udp_dport = int(entries[1].get())
+        udp_len = int(entries[2].get())
+        udp=UDP(sport=udp_sport,dport=udp_dport,len=udp_len)
+
+        ip_version = int(entries[4].get())
+        ip_ihl = int(entries[5].get())
+        ip_tos = int(entries[6].get(), 16)
+        ip_id = int(entries[7].get())
+        ip_flags = int(entries[8].get())
+        ip_frag = int(entries[9].get())
+        ip_ttl = int(entries[10].get())
+        ip_src = entries[12].get()
+        ip_dst = entries[13].get()
+        ip= IP(version=ip_version, ihl=ip_ihl, tos=ip_tos, id=ip_id,
+                            frag=ip_frag, flags=ip_flags, ttl=ip_ttl,src=ip_src, dst=ip_dst)
+        raw_packet=raw(ip/udp)
+        packet_to_send=IP(raw_packet)
+        packet_to_send.show()
+        udp=packet_to_send[UDP]
+        entries[3]['state'] = NORMAL  # 重新激活
+        entries[3].delete(0, END)
+        entries[3].insert(0, hex(udp.chksum))
+        entries[3]['state'] = DISABLED  # 不可操作
+        #ip首部校验和
+        entries[11]['state'] = NORMAL  # 重新激活
+        entries[11].delete(0, END)
+        entries[11].insert(0, hex(packet_to_send.chksum))
+        entries[11]['state'] = DISABLED  # 不可操作
+        # 开一个线程用于连续发送数据包
+        t = threading.Thread(target=send_packet_continously, args=(packet_to_send,))
+        t.setDaemon(True)
+        t.start()
+        # 使协议导航树不可用
+        toggle_protocols_tree_state()
+        send_packet_button['text'] = '停止'
+    else:
+        # 终止数据包发送线程
+        stop_sending.set()
+        # 恢复协议导航树可用
+        toggle_protocols_tree_state()
+        send_packet_button['text'] = '连续发送'
+
+def send_udp_packet_once(entries):
+    udp_sport = int(entries[0].get())
+    udp_dport = int(entries[1].get())
+    udp_len = int(entries[2].get())
+    udp = UDP(sport=udp_sport, dport=udp_dport, len=udp_len)
+
+    ip_version = int(entries[4].get())
+    ip_ihl = int(entries[5].get())
+    ip_tos = int(entries[6].get(), 16)
+    ip_id = int(entries[7].get())
+    ip_flags = int(entries[8].get())
+    ip_frag = int(entries[9].get())
+    ip_ttl = int(entries[10].get())
+    ip_src = entries[12].get()
+    ip_dst = entries[13].get()
+    ip = IP(version=ip_version, ihl=ip_ihl, tos=ip_tos, id=ip_id,
+            frag=ip_frag, flags=ip_flags, ttl=ip_ttl, src=ip_src, dst=ip_dst)
+    raw_packet = raw(ip / udp)
+    packet_to_send = IP(raw_packet)
+    packet_to_send.show()
+    udp = packet_to_send[UDP]
+    entries[3]['state'] = NORMAL  # 重新激活
+    entries[3].delete(0, END)
+    entries[3].insert(0, hex(udp.chksum))
+    entries[3]['state'] = DISABLED  # 不可操作
+    # ip首部校验和
+    entries[11]['state'] = NORMAL  # 重新激活
+    entries[11].delete(0, END)
+    entries[11].insert(0, hex(packet_to_send.chksum))
+    entries[11]['state'] = DISABLED  # 不可操作
+    send_packet_once(packet_to_send)
 #------------------------------------------------------------
 # ICMP SEND MODULE
 #------------------------------------------------------------
-
+def create_icmp_sender():
+    pass
+def create_default_icmp_packet(entries):
+    pass
+def send_icmp_packet_continuously(entries, send_packet_button):
+    pass
+def send_icmp_packet_once(entries):
+    pass
 #------------------------------------------------------------
 # ARP SEND MODULE
 #------------------------------------------------------------
-
+def create_arp_sender():
+    pass
+def create_default_arp_packet(entries):
+    pass
+def send_arp_packet_continuously(entries, send_packet_button):
+    pass
+def send_arp_packet_once(entries):
+    pass
 #------------------------------------------------------------
 # ENTRANCE
 #------------------------------------------------------------
@@ -408,6 +740,8 @@ if __name__ == '__main__':
     # 将协议编辑区窗体放到左右分隔窗体的右侧
     main_panedwindow.add(protocol_editor_panedwindow)
     # 创建欢迎界面
+    #a = TCP()
+    #a.show()
     #create_welcome_page(protocol_editor_panedwindow)
     main_panedwindow.pack(fill=BOTH, expand=1)#按添加的顺序排列组件
     # 启动消息处理
