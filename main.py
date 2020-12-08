@@ -2,8 +2,8 @@
 
 #----------------------------------------------------------
 # import module:
-# tkinter to make GUI
-# scapy to make packet and send it out
+# 1.tkinter to make GUI
+# 2.scapy to make packet and send it out
 #----------------------------------------------------------
 
 import tkinter
@@ -17,8 +17,9 @@ from scapy.layers.l2 import *
 
 
 #---------------------------------------------------------
+# INITIAL STUCTURE MODULE
 # initial basic frame of the GUI with tkinter
-# we name it tk
+# we name the frame ‘tk’
 #---------------------------------------------------------
 
 tk = tkinter.Tk()
@@ -32,7 +33,7 @@ protocol_editor_panedwindow = PanedWindow(orient=VERTICAL, sashrelief=RAISED, sa
 # 给出导航树定义
 protocols_tree = Treeview()
 # 获得当前网卡的默认网关
-# os.popen('route print').readlines() 打开了一个系统文件并读取了所有行，构成list ？
+# os.popen('route print').readlines() 打开了一个系统文件并读取了所有行，构成list ，在list里搜索网关
 default_gateway = [a for a in os.popen('route print').readlines() if ' 0.0.0.0 ' in a][0].split()[-3]
 # 用来终止数据包发送线程的线程事件
 stop_sending = threading.Event()
@@ -40,7 +41,7 @@ stop_sending = threading.Event()
 
 
 #------------------------------------------------------------
-# STRUCTURE MODULE
+# CREATE STRUCTURE MODULE
 # here we get to shape the structure of main_panedwindow
 # 1:status bar at the bottom
 # 2:guide tree of protocols on the left
@@ -165,7 +166,7 @@ def clear_protocol_editor(entries):
 
 def on_click_protocols_tree(event):
     """
-    协议导航树里面单击协议后响应函数，打开相应协议的编辑器
+    协议导航树里面单击协议后的响应函数，打开相应协议的编辑器
     :param event: Treeview 单击事件
     :return: None
     """
@@ -204,6 +205,11 @@ def toggle_protocols_tree_state():
         protocols_tree.bind('<Button-1>', lambda event: 'break')
 
 def send_packet_continously(packet_sending):
+    """
+    连续发包函数，连续发包并在状态栏显示发包数和发包速率
+    :param packet_sending: 传入待发送的包
+    :return:
+    """
     n = 0
     stop_sending.clear()
 
@@ -236,9 +242,14 @@ def send_packet_continously(packet_sending):
                        n, packet_protocol, total_byte, bytes_persec)
 
 def send_packet_once(packet_sending):
+    """
+    发送包一次
+    :param packet_sending:
+    :return:
+    """
     # 包大小，包协议类型获取
     packet_size = len(packet_sending)
-    protocol_names = ['TCP', 'UDP', 'ICMP','IP', 'ARP', 'Unkown']
+    protocol_names = ['TCP', 'UDP', 'ICMP','IP', 'ARP', 'Unkown']#注意要把ICMP放在IP前面，不然ICMP包会被检测为IP包
     packet_protocol = ''
     for a in protocol_names:
         if a in packet_sending:
@@ -319,8 +330,8 @@ def create_default_ip_packet(entries):
 
 def send_ip_packet_continuously(entries, send_packet_button):
     """
-    发送IP包
-    :param entries: 待发送的条目
+    连续发送IP包
+    :param entries: 待发送的条目，即输入框内目前的值
     :param send_packet_button: 触发按钮
     :return:
     """
@@ -360,6 +371,11 @@ def send_ip_packet_continuously(entries, send_packet_button):
         send_packet_button['text'] = '连续发送'
 
 def send_ip_packet_once(entries):
+    """
+    发送一次IP包
+    :param entries: 传入输入框内的目前的输入值
+    :return:
+    """
     ip_version = int(entries[0].get())
     ip_ihl = int(entries[1].get())
     ip_tos = int(entries[2].get(), 16)  # 16进制
@@ -428,7 +444,7 @@ def create_default_tcp_packet(entries):
     """
      在协议字段编辑框中填入默认TCP包的字段值
      :param entries: 协议字段编辑框列表
-     :return: None
+     :return:
     """
     clear_protocol_editor(entries)
     default_tcp_packet = IP()/TCP()
@@ -462,8 +478,8 @@ def create_default_tcp_packet(entries):
 
 def send_tcp_packet_continuously(entries, send_packet_button):
     """
-    发TCP包
-    :param entries:
+    连续发TCP包
+    :param entries:待发送的条目，用于构造包
     :param send_packet_button:
     :return:
     """
@@ -526,6 +542,11 @@ def send_tcp_packet_continuously(entries, send_packet_button):
         send_packet_button['text'] = '连续发送'
 
 def send_tcp_packet_once(entries):
+    """
+    发送一次TCP包
+    :param entries: 待发送的条目，用于构造TCP包
+    :return:
+    """
     tcp_sport = int(entries[0].get())
     tcp_dport = int(entries[1].get())
     tcp_seq = int(entries[2].get())
@@ -575,21 +596,21 @@ def send_tcp_packet_once(entries):
 #------------------------------------------------------------
 def create_udp_sender():
     """
-    创建TCP包编辑器
+    创建UDP包编辑器
     :return: None
     """
-    # TCP帧编辑区
+    # UDP帧编辑区
     udp_head = '源端口','目的端口','长度(最小值为8)','检验和',\
                'IP协议的版本：', '首部长度：', '区分服务：','标识：', '标志(0-2)DF,MF：',\
                '片偏移：', '生存时间：','首部校验和：', '源IP地址：', '目的IP地址：'
     entries = create_protocol_editor(protocol_editor_panedwindow, udp_head)
     send_packet_button, reset_buttun, default_packet_button, \
     send_packet_once_button = create_bottom_buttons(protocol_editor_panedwindow)
-    # 为"回车键"的Press事件编写事件响应代码，发送IP包
+    # 为"回车键"的Press事件编写事件响应代码，发送UDP包
     tk.bind('<Return>', (lambda event: send_udp_packet_once(entries)))  # <Return>代表回车键
-    # 为"发送"按钮的单击事件编写事件响应代码，发送IP包
+    # 为"发送"按钮的单击事件编写事件响应代码，发送UDP包
     # 为"重置"按钮的单击事件编写事件响应代码，清除所有字段
-    # 为"默认值"按钮的单击事件编写事件响应代码，填入IP包默认字段
+    # 为"默认值"按钮的单击事件编写事件响应代码，填入UDP包默认字段
     # <Button-1>代表鼠标左键单击
     send_packet_button.bind('<Button-1>', (lambda event: send_udp_packet_continuously(entries, send_packet_button)))
     reset_buttun.bind('<Button-1>', (lambda event: clear_protocol_editor(entries)))
@@ -598,7 +619,7 @@ def create_udp_sender():
 
 def create_default_udp_packet(entries):
     """
-    在协议字段编辑框中填入默认TCP包的字段值
+    在协议字段编辑框中填入默认UDP包的字段值
     :param entries: 协议字段编辑框列表
     :return: None
     """
@@ -628,9 +649,9 @@ def create_default_udp_packet(entries):
 
 def send_udp_packet_continuously(entries, send_packet_button):
     """
-    发TCP包
-    :param entries:
-    :param send_packet_button:
+    构造、发UDP包
+    :param entries:待构造成UDP包的条目
+    :param send_packet_button:发送按钮状态
     :return:
     """
     if send_packet_button['text'] == '连续发送':
@@ -678,6 +699,11 @@ def send_udp_packet_continuously(entries, send_packet_button):
         send_packet_button['text'] = '连续发送'
 
 def send_udp_packet_once(entries):
+    """
+    构造并发送一次UDP包
+    :param entries: 待发送的条目
+    :return:
+    """
     udp_sport = int(entries[0].get())
     udp_dport = int(entries[1].get())
     udp_len = int(entries[2].get())
@@ -739,7 +765,7 @@ def create_icmp_sender():
 
 def create_default_icmp_packet(entries):
     """
-     在协议字段编辑框中填入默认TCP包的字段值
+     在协议字段编辑框中填入默认ICMP包的字段值
      :param entries: 协议字段编辑框列表
      :return: None
     """
@@ -775,7 +801,7 @@ def create_default_icmp_packet(entries):
 
 def send_icmp_packet_continuously(entries, send_packet_button):
     """
-    发送IP包
+    发送ICMP包
     :param entries: 待发送的条目
     :param send_packet_button: 触发按钮
     :return:
@@ -831,6 +857,11 @@ def send_icmp_packet_continuously(entries, send_packet_button):
         send_packet_button['text'] = '连续发送'
 
 def send_icmp_packet_once(entries):
+    """
+    构造、发送ICMP包
+    :param entries: 待发送的条目
+    :return:
+    """
     ip_version = int(entries[0].get())
     ip_ihl = int(entries[1].get())
     ip_tos = int(entries[2].get(), 16)  # 16进制
@@ -923,6 +954,12 @@ def create_default_arp_packet(entries):
     entries[8].insert(0, default_gateway)
 
 def send_arp_packet_continuously(entries, send_packet_button):
+    """
+    构造、并连续发送ARP包
+    :param entries: 待发送的条目
+    :param send_packet_button: 发送按钮状态
+    :return:
+    """
     if send_packet_button['text'] == '连续发送':
         arp_hwtype = int(entries[0].get())
         arp_ptype = int(entries[1].get(), 16)
@@ -951,6 +988,11 @@ def send_arp_packet_continuously(entries, send_packet_button):
         send_packet_button['text'] = '连续发送'
 
 def send_arp_packet_once(entries):
+    """
+    构造并发送一次ARP包
+    :param entries: 待发送的条目
+    :return:
+    """
     arp_hwtype = int(entries[0].get())
     arp_ptype = int(entries[1].get(), 16)
     arp_hwlen = int(entries[2].get())
@@ -965,6 +1007,13 @@ def send_arp_packet_once(entries):
     send_packet_once(packet_to_send)
 
 #------------------------------------------------------------
+# WELCOME PAGE
+#------------------------------------------------------------
+def create_welcome_page(root):
+    welcome_string = '封面\n\n计算机通信网大作业\n网络发包器\n\n学号：518030910107\n姓名：梁昌友'
+    Label(root, justify=CENTER, padx=10, pady=150, text=welcome_string,
+          font=('楷书', '30', 'bold')).pack()
+#------------------------------------------------------------
 # ENTRANCE
 #------------------------------------------------------------
 
@@ -974,9 +1023,9 @@ if __name__ == '__main__':
     # 将协议编辑区窗体放到左右分隔窗体的右侧
     main_panedwindow.add(protocol_editor_panedwindow)
     # 创建欢迎界面
-    a = IP()/ICMP()
+    #a = IP()/ICMP()
     #a.show()
-    #create_welcome_page(protocol_editor_panedwindow)
+    create_welcome_page(protocol_editor_panedwindow)
     main_panedwindow.pack(fill=BOTH, expand=1)#按添加的顺序排列组件
     # 启动消息处理
     tk.mainloop()
